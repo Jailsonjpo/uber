@@ -56,12 +56,11 @@ public class RequisicoesAdapter extends RecyclerView.Adapter<RequisicoesAdapter.
 
         public MyViewHolder(View itemView){
 
-            super(itemView){
-                super(itemView);
+            super(itemView);
 
                 nome = itemView.findViewById(R.id.textRequisicaoNome);
                 distancia = itemView.findViewById(R.id.textRequisicaoDistancia);
-            }
+
         }
 
     }
