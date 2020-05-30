@@ -3,6 +3,9 @@ package com.example.uber.model;
 import com.example.uber.config.ConfiguracaoFirebase;
 import com.google.firebase.database.DatabaseReference;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class Requisicao {
 
     private String id;
@@ -12,9 +15,9 @@ public class Requisicao {
     private Destino destino;
 
     public static final String STATUS_AGUARDANDO = "aguardando";
-    public static final String STATUS_A_CAMINHO = "a caminho";
-    public static final String STATUS_VIAGEM = "viagem";
-    public static final String STATUS_FINALIZADA = "finalizada";
+    public static final String STATUS_A_CAMINHO = "A Caminho";
+    public static final String STATUS_VIAGEM = "Viagem";
+    public static final String STATUS_FINALIZADA = "Finalizada";
 
     public Requisicao() {
     }
@@ -29,6 +32,20 @@ public class Requisicao {
 
         requisicoes.child(getId()).setValue(this);
 
+    }
+
+    public void atualizar(){
+
+        DatabaseReference firebaseRef = ConfiguracaoFirebase.getFirebaseDatabase();
+        DatabaseReference requisicoes = firebaseRef.child("requisicoes");
+
+        DatabaseReference requisicao = requisicoes.child(getId());
+
+        Map objeto = new HashMap();
+        objeto.put("motorista", getMotorista());
+        objeto.put("status", getStatus());
+
+        requisicao.updateChildren(objeto);
     }
 
     public String getId() {

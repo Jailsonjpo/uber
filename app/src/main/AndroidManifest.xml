@@ -19,7 +19,9 @@
         <activity
             android:name=".activity.CorridaActivity"
             android:label="@string/title_activity_corrida"
-            android:theme="@style/AppTheme.NoActionBar"></activity>
+            android:theme="@style/AppTheme.NoActionBar"
+            android:parentActivityName=".activity.RequisicoesActivity" />
+
         <activity
             android:name=".activity.PassageiroActivity"
             android:label="@string/title_activity_passageiro"
@@ -33,6 +35,8 @@
             android:name=".activity.LoginActivity"
             android:label="@string/titulo_login"
             android:parentActivityName=".activity.LoginActivity" />
+
+
         <!--
              The API key for Google Maps-based APIs is defined as a string resource.
              (See the file "res/values/google_maps_api.xml").
