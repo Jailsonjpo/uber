@@ -114,14 +114,14 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         buttonAceitarCorrida.setText("A Caminho do Passageiro");
 
         //Exibe marcador do motorista
-        adicionarMarcadorMotorista(localMotorista, motorista.getNome());
+        adicionaMarcadorMotorista(localMotorista, motorista.getNome());
 
         //Exibe marcador do passageiro
-        adicionarMarcadorMotorista(localPassageiro, passageiro.getNome());
+        adicionaMarcadorPassageiro(localPassageiro, passageiro.getNome());
 
     }
 
-    private void adicionarMarcadorMotorista(LatLng localizacao, String titulo){
+    private void adicionaMarcadorMotorista(LatLng localizacao, String titulo){
 
         if(marcadorMotorista != null)
             marcadorMotorista.remove();
@@ -129,11 +129,11 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         marcadorMotorista = mMap.addMarker(new MarkerOptions().position(localizacao).title("titulo").icon(BitmapDescriptorFactory.fromResource(R.drawable.carro))
         );
 
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localizacao, 20));
+        //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localizacao, 20));
 
     }
 
-    private void adicionarMarcadorPassageiro(LatLng localizacao, String titulo){
+    private void adicionaMarcadorPassageiro(LatLng localizacao, String titulo){
 
         if(marcadorPassageiro != null)
             marcadorPassageiro.remove();
@@ -141,7 +141,7 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         marcadorPassageiro = mMap.addMarker(new MarkerOptions().position(localizacao).title("titulo").icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
         );
 
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localizacao, 20));
+        //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localizacao, 20));
 
     }
 
