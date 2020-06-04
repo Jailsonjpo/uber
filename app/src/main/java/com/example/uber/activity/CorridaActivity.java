@@ -17,6 +17,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -77,7 +78,7 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
 
     private void verificaStatusRequisicao(){
 
-             final DatabaseReference requisicoes = firebaseRef.child("requisicoes").child(idRequisicao);
+              DatabaseReference requisicoes = firebaseRef.child("requisicoes").child(idRequisicao);
             requisicoes.addValueEventListener(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
@@ -114,35 +115,53 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         buttonAceitarCorrida.setText("A Caminho do Passageiro");
 
         //Exibe marcador do motorista
-        adicionarMarcadorMotorista(localMotorista, motorista.getNome());
+        adicionaMarcadorMotorista(localMotorista, motorista.getNome());
 
         //Exibe marcador do passageiro
-        adicionarMarcadorMotorista(localPassageiro, passageiro.getNome());
+        adicionaMarcadorPassageiro(localPassageiro, passageiro.getNome());
+
+        //Centralizar dois marcadores
+
+        centralizarDoisMarcadores(marcadorMotorista, marcadorPassageiro);
 
     }
 
-    private void adicionarMarcadorMotorista(LatLng localizacao, String titulo){
+    private void centralizarDoisMarcadores(Marker marcador1, Marker marcador2){
+
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+
+        builder.include(marcador1.getPosition());
+        builder.include(marcador2.getPosition());
+
+        LatLngBounds bounds = builder.build();
+
+        int largura = getResources().getDisplayMetrics().widthPixels;
+        int altura = getResources().getDisplayMetrics().heightPixels;
+
+        int espacoInterno = (int) (largura * 0.20);
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, largura, altura, espacoInterno));
+
+    }
+
+    private void adicionaMarcadorMotorista(LatLng localizacao, String titulo){
 
         if(marcadorMotorista != null)
             marcadorMotorista.remove();
 
-        marcadorMotorista = mMap.addMarker(new MarkerOptions().position(localizacao).title("titulo").icon(BitmapDescriptorFactory.fromResource(R.drawable.carro))
+        marcadorMotorista = mMap.addMarker(new MarkerOptions().position(localizacao).title(titulo).icon(BitmapDescriptorFactory.fromResource(R.drawable.carro))
         );
 
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localizacao, 20));
 
     }
 
-    private void adicionarMarcadorPassageiro(LatLng localizacao, String titulo){
+    private void adicionaMarcadorPassageiro(LatLng localizacao, String titulo){
 
         if(marcadorPassageiro != null)
             marcadorPassageiro.remove();
 
-        marcadorPassageiro = mMap.addMarker(new MarkerOptions().position(localizacao).title("titulo").icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
+        marcadorPassageiro = mMap.addMarker(new MarkerOptions().position(localizacao).title(titulo).icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
         );
-
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localizacao, 20));
-
     }
 
     /**
