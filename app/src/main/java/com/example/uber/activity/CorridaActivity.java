@@ -17,6 +17,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
@@ -40,17 +41,21 @@ import static com.example.uber.model.Requisicao.*;
 public class CorridaActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     //Componente
-    Button buttonAceitarCorrida;
+    private Button buttonAceitarCorrida;
 
     private GoogleMap mMap;
 
     private LocationManager locationManager;
     private LocationListener locationListener;
     private LatLng localMotorista;
+    private LatLng localPassageiro;
     private Usuario motorista;
+    private Usuario passageiro;
     private String idRequisicao;
     private Requisicao requisicao;
     private DatabaseReference firebaseRef;
+    private Marker marcadorMotorista;
+    private Marker marcadorPassageiro;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,12 +83,15 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                     //Recupera requisicao
                     requisicao = dataSnapshot.getValue(Requisicao.class);
+                    passageiro = requisicao.getPassageiro();
+                    localPassageiro = new LatLng(
+                            Double.parseDouble(passageiro.getLatitude()), Double.parseDouble(passageiro.getLongitude()));
 
                     switch (requisicao.getStatus()){
-                        case STATUS_AGUARDANDO: requisicaoAguardando();
+                        case Requisicao.STATUS_AGUARDANDO: requisicaoAguardando();
                         break;
 
-                        case STATUS_A_CAMINHO: requisicaoAcaminho();
+                        case Requisicao.STATUS_A_CAMINHO: requisicaoAcaminho();
                         break;
                     }
                 }
@@ -104,6 +112,37 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
     private void requisicaoAcaminho(){
 
         buttonAceitarCorrida.setText("A Caminho do Passageiro");
+
+        //Exibe marcador do motorista
+        adicionarMarcadorMotorista(localMotorista, motorista.getNome());
+
+        //Exibe marcador do passageiro
+        adicionarMarcadorMotorista(localPassageiro, passageiro.getNome());
+
+    }
+
+    private void adicionarMarcadorMotorista(LatLng localizacao, String titulo){
+
+        if(marcadorMotorista != null)
+            marcadorMotorista.remove();
+
+        marcadorMotorista = mMap.addMarker(new MarkerOptions().position(localizacao).title("titulo").icon(BitmapDescriptorFactory.fromResource(R.drawable.carro))
+        );
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localizacao, 20));
+
+    }
+
+    private void adicionarMarcadorPassageiro(LatLng localizacao, String titulo){
+
+        if(marcadorPassageiro != null)
+            marcadorPassageiro.remove();
+
+        marcadorPassageiro = mMap.addMarker(new MarkerOptions().position(localizacao).title("titulo").icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
+        );
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localizacao, 20));
+
     }
 
     /**
