@@ -139,6 +139,7 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         int altura = getResources().getDisplayMetrics().heightPixels;
 
         int espacoInterno = (int) (largura * 0.20);
+        //int espacoInterno = (int) (largura * 0.20);
 
         mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, largura, altura, espacoInterno));
 
