@@ -57,6 +57,9 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
     private DatabaseReference firebaseRef;
     private Marker marcadorMotorista;
     private Marker marcadorPassageiro;
+    private String statusRequisicao;
+    private Boolean requisicaoAtiva;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,7 +74,9 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
 
             Bundle extras = getIntent().getExtras();
             motorista = (Usuario) extras.getSerializable("motorista");
+            localMotorista = new LatLng(Double.parseDouble(motorista.getLatitude()), Double.parseDouble(motorista.getLongitude()));
             idRequisicao = extras.getString("idRequisicao");
+            requisicaoAtiva = extras.getBoolean("requisicaoAtiva");
             verificaStatusRequisicao();
         }
     }
@@ -84,17 +89,18 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
                 public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                     //Recupera requisicao
                     requisicao = dataSnapshot.getValue(Requisicao.class);
-                    passageiro = requisicao.getPassageiro();
-                    localPassageiro = new LatLng(
-                            Double.parseDouble(passageiro.getLatitude()), Double.parseDouble(passageiro.getLongitude()));
 
-                    switch (requisicao.getStatus()){
-                        case Requisicao.STATUS_AGUARDANDO: requisicaoAguardando();
-                        break;
+                    if(requisicao != null){
 
-                        case Requisicao.STATUS_A_CAMINHO: requisicaoAcaminho();
-                        break;
+                        passageiro = requisicao.getPassageiro();
+                        localPassageiro = new LatLng(
+                                Double.parseDouble(passageiro.getLatitude()), Double.parseDouble(passageiro.getLongitude()));
+
+                        statusRequisicao = requisicao.getStatus();
+                        alteraInterfaceStatusRequisicao(statusRequisicao);
+
                     }
+
                 }
 
                 @Override
@@ -103,6 +109,17 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
                 }
             });
 
+    }
+
+    private void alteraInterfaceStatusRequisicao(String status){
+
+        switch (status){
+            case Requisicao.STATUS_AGUARDANDO: requisicaoAguardando();
+                break;
+
+            case Requisicao.STATUS_A_CAMINHO: requisicaoAcaminho();
+                break;
+        }
     }
 
     private void requisicaoAguardando(){
@@ -153,7 +170,6 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         marcadorMotorista = mMap.addMarker(new MarkerOptions().position(localizacao).title(titulo).icon(BitmapDescriptorFactory.fromResource(R.drawable.carro))
         );
 
-
     }
 
     private void adicionaMarcadorPassageiro(LatLng localizacao, String titulo){
@@ -195,11 +211,7 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
                 double longitude = location.getLongitude();
                 localMotorista = new LatLng(latitude, longitude);
 
-                mMap.clear();
-                mMap.addMarker(new MarkerOptions().position(localMotorista).title("Meu Local").icon(BitmapDescriptorFactory.fromResource(R.drawable.carro))
-                );
-
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localMotorista, 15));
+                alteraInterfaceStatusRequisicao(statusRequisicao);
 
             }
 
@@ -259,4 +271,11 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
 
     }
 
+    @Override
+    public boolean onSupportNavigateUp() {
+        if(requisicaoAtiva){
+
+        }
+        return false;
+    }
 }
