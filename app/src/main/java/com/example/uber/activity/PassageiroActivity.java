@@ -87,6 +87,15 @@ public class PassageiroActivity extends AppCompatActivity implements OnMapReadyC
 
     }
 
+    /*
+    Destino: -15.649341, -47.794018
+    Lat/Lon passageiro: -15.649266, -47.791678
+    Lat/Lon motorista a Caminho: inicial -15.648073, -47.789114
+                       intermediaria -15.649733, -47.789506
+                       final: -15.649320, -47.791609
+
+     */
+
     private void verificaStatusRequisicao(){
 
         Usuario usuarioLogado = UsuarioFirebase.getDadosUsuarioLogado();
@@ -268,6 +277,9 @@ public class PassageiroActivity extends AppCompatActivity implements OnMapReadyC
                 double latitude = location.getLatitude();
                 double longitude = location.getLongitude();
                 localPassageiro = new LatLng(latitude, longitude);
+
+                //Atualizar Geofire
+                UsuarioFirebase.atualizarDadosLocalizacao(latitude, longitude);
 
                 mMap.clear();
                 mMap.addMarker(new MarkerOptions().position(localPassageiro).title("Meu Local").icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))

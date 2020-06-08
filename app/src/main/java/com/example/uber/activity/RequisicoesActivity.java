@@ -114,10 +114,13 @@ public class RequisicoesActivity extends AppCompatActivity {
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                //recuperar latitude e longitude
 
+                //recuperar latitude e longitude
                 String latitude = String.valueOf(location.getLatitude());
                 String longitude = String.valueOf(location.getLongitude());
+
+                //Atualizar Geofire
+                UsuarioFirebase.atualizarDadosLocalizacao(location.getLatitude(), location.getLongitude());
 
                 if( !latitude.isEmpty() && !longitude.isEmpty()){
 
