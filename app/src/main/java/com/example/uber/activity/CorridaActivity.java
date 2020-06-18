@@ -18,6 +18,7 @@ import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.firebase.geofire.GeoQuery;
 import com.firebase.geofire.GeoQueryDataEventListener;
+import com.firebase.geofire.GeoQueryEventListener;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -37,6 +38,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -169,28 +171,30 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         DatabaseReference localUsuario = ConfiguracaoFirebase.getFirebaseDatabase().child("local_usuario");
         GeoFire geoFire = new GeoFire(localUsuario);
 
-        //Adiciona Círculo no passageiro
+        //Adiciona Círculo no passageiro  -radius(50) em Metros
         Circle circlulo = mMap.addCircle(new CircleOptions().center(localPassageiro).radius(50).fillColor(Color.argb(90, 255, 153, 0)).strokeColor(Color.argb(190, 255, 152, 0)));
 
+        //radius0.05 em km
         GeoQuery geoQuery = geoFire.queryAtLocation(new GeoLocation(localPassageiro.latitude, localPassageiro.longitude),0.05);
-        geoQuery.addGeoQueryDataEventListener(new GeoQueryDataEventListener() {
+        geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
             @Override
-            public void onDataEntered(DataSnapshot dataSnapshot, GeoLocation location) {
+            public void onKeyEntered(String key, GeoLocation location) {
+
+                if(key.equals(passageiro.getId())){
+                        Log.d("onKeyEntered", "onKeyEntered: passageiro está dentro da área!");
+                }else if(key.equals(motorista.getId())){
+                        Log.d("onKeyEntered", "onKeyEntered: motorista está dentro da área!");
+                }
 
             }
 
             @Override
-            public void onDataExited(DataSnapshot dataSnapshot) {
+            public void onKeyExited(String key) {
 
             }
 
             @Override
-            public void onDataMoved(DataSnapshot dataSnapshot, GeoLocation location) {
-
-            }
-
-            @Override
-            public void onDataChanged(DataSnapshot dataSnapshot, GeoLocation location) {
+            public void onKeyMoved(String key, GeoLocation location) {
 
             }
 
