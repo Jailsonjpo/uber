@@ -56,7 +56,6 @@ public class UsuarioFirebase {
 
                         Log.d("Perfil", "Erro ao atualizar nome de perfil.");
                     }
-
                 }
             });
 

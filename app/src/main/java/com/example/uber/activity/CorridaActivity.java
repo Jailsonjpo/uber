@@ -160,8 +160,6 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
 
         //Inicia monitoramento do motorista / passageiro
         iniciarMonitoramentoCorrida(passageiro, motorista);
-
-
     }
 
     private void iniciarMonitoramentoCorrida(Usuario p, Usuario m){
