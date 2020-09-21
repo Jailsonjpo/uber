@@ -90,8 +90,11 @@ public class RequisicoesActivity extends AppCompatActivity {
 
                         Requisicao requisicao = ds.getValue(Requisicao.class);
 
-                        if(requisicao.getStatus().equals(Requisicao.STATUS_A_CAMINHO) || requisicao.getStatus().equals(Requisicao.STATUS_VIAGEM)){
+                        if(requisicao.getStatus().equals(Requisicao.STATUS_A_CAMINHO)
+                                || requisicao.getStatus().equals(Requisicao.STATUS_VIAGEM)
+                                || requisicao.getStatus().equals(Requisicao.STATUS_FINALIZADA)){
 
+                            motorista = requisicao.getMotorista();
                             abrirTelaCorrida(requisicao.getId(), motorista, true);
 
                         }
@@ -126,6 +129,9 @@ public class RequisicoesActivity extends AppCompatActivity {
 
                     motorista.setLatitude(latitude);
                     motorista.setLongitude(longitude);
+
+
+                    adicionaEventoCliqueRecyclerView();
                     locationManager.removeUpdates(locationListener);
                     adapter.notifyDataSetChanged();
 
@@ -207,7 +213,10 @@ public class RequisicoesActivity extends AppCompatActivity {
         recyclerRequisicoes.setLayoutManager(layoutManager);
         recyclerRequisicoes.setHasFixedSize(true);
         recyclerRequisicoes.setAdapter(adapter);
+        recupararRequisicoes();
+    }
 
+    private void adicionaEventoCliqueRecyclerView(){
         //Adiciona evendo de clique no recycler
         recyclerRequisicoes.addOnItemTouchListener(new RecyclerItemClickListener(getApplicationContext(), recyclerRequisicoes, new RecyclerItemClickListener.OnItemClickListener() {
             @Override
@@ -227,9 +236,6 @@ public class RequisicoesActivity extends AppCompatActivity {
 
             }
         }));
-
-
-        recupararRequisicoes();
     }
 
     private void recupararRequisicoes(){

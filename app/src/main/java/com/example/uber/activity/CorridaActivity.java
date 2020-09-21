@@ -8,10 +8,13 @@ import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.net.Uri;
 import android.os.Bundle;
 
 import com.example.uber.config.ConfiguracaoFirebase;
+import com.example.uber.helper.Local;
 import com.example.uber.helper.UsuarioFirebase;
+import com.example.uber.model.Destino;
 import com.example.uber.model.Requisicao;
 import com.example.uber.model.Usuario;
 import com.firebase.geofire.GeoFire;
@@ -49,12 +52,15 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.ValueEventListener;
 
+import java.text.DecimalFormat;
+
 import static com.example.uber.model.Requisicao.*;
 
 public class CorridaActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     //Componente
     private Button buttonAceitarCorrida;
+    private FloatingActionButton fabRota;
 
     private GoogleMap mMap;
 
@@ -69,8 +75,10 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
     private DatabaseReference firebaseRef;
     private Marker marcadorMotorista;
     private Marker marcadorPassageiro;
+    private Marker marcadorDestino;
     private String statusRequisicao;
     private Boolean requisicaoAtiva;
+    private Destino destino;
 
 
     @Override
@@ -109,6 +117,7 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
                                 Double.parseDouble(passageiro.getLatitude()), Double.parseDouble(passageiro.getLongitude()));
 
                         statusRequisicao = requisicao.getStatus();
+                        destino = requisicao.getDestino();
                         alteraInterfaceStatusRequisicao(statusRequisicao);
 
                     }
@@ -131,8 +140,58 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
 
             case Requisicao.STATUS_A_CAMINHO: requisicaoAcaminho();
                 break;
+
+            case Requisicao.STATUS_VIAGEM: requisicaoViagem();
+                break;
+
+            case Requisicao.STATUS_FINALIZADA: requisicaoFinalizada();
+                break;
+
+            case Requisicao.STATUS_CANCELADA: requisicaoCancelada();
+                break;
         }
     }
+
+    private void requisicaoCancelada() {
+
+        Toast.makeText(this,"Requisição foi cancelada pelo passageiro!", Toast.LENGTH_SHORT).show();
+        startActivity(new Intent(CorridaActivity.this, RequisicoesActivity.class));
+
+    }
+
+    private void requisicaoFinalizada() {
+        fabRota.setVisibility(View.GONE);
+        requisicaoAtiva = false;
+
+        if(marcadorMotorista != null)
+            marcadorMotorista.remove();
+
+        if(marcadorDestino != null)
+            marcadorDestino.remove();
+
+        //Exibe marcador de destino
+        LatLng localDestino = new LatLng(
+                Double.parseDouble(destino.getLatitude()),
+                Double.parseDouble(destino.getLongitude()));
+
+        adicionaMarcadorDestino(localDestino, "Destino");
+        centralizarMarcador(localDestino);
+
+        //Calcular distancia
+        float distancia = Local.calcularDistancia(localPassageiro, localDestino);
+        float valor = distancia * 8;
+        DecimalFormat decimal = new DecimalFormat("0.00");
+        String resultado = decimal.format(valor);
+
+        buttonAceitarCorrida.setText("Corrida finalizada - R$ " + resultado);
+    }
+
+    private void centralizarMarcador(LatLng local){
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(local, 20));
+
+    }
+
 
     private void requisicaoAguardando(){
 
@@ -140,14 +199,14 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
 
         //Exibe marcador do motorista
         adicionaMarcadorMotorista(localMotorista, motorista.getNome());
-
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localMotorista, 20));
+        centralizarMarcador(localMotorista);
 
     }
 
     private void requisicaoAcaminho(){
 
         buttonAceitarCorrida.setText("A Caminho do Passageiro");
+        fabRota.setVisibility(View.VISIBLE);
 
         //Exibe marcador do motorista
         adicionaMarcadorMotorista(localMotorista, motorista.getNome());
@@ -159,10 +218,31 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         centralizarDoisMarcadores(marcadorMotorista, marcadorPassageiro);
 
         //Inicia monitoramento do motorista / passageiro
-        iniciarMonitoramentoCorrida(passageiro, motorista);
+        iniciarMonitoramento(motorista, localPassageiro, STATUS_VIAGEM);
     }
 
-    private void iniciarMonitoramentoCorrida(Usuario p, Usuario m){
+    private void requisicaoViagem(){
+        //Altera interface
+        fabRota.setVisibility(View.VISIBLE);
+        buttonAceitarCorrida.setText("A caminho do Destino");
+
+        //Exibe marcador do motorista
+        adicionaMarcadorMotorista(localMotorista, motorista.getNome());
+
+        //Exibe marcador de destino
+        LatLng localDestino = new LatLng(Double.parseDouble(destino.getLatitude()), Double.parseDouble(destino.getLongitude()));
+
+    adicionaMarcadorDestino(localDestino, "Destino");
+
+        //Centraliza marcadores motorista / destino
+        centralizarDoisMarcadores(marcadorMotorista, marcadorDestino);
+
+        //Inicia monitoramento do motorista / passageiro
+        iniciarMonitoramento(motorista, localDestino, STATUS_FINALIZADA);
+
+    }
+
+    private void iniciarMonitoramento(final Usuario uOrigem, LatLng localDestino, final String status){
 
         //Inicializar GeoFire
         //Define nó de local de usuário
@@ -170,19 +250,33 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         GeoFire geoFire = new GeoFire(localUsuario);
 
         //Adiciona Círculo no passageiro  -radius(50) em Metros
-        Circle circlulo = mMap.addCircle(new CircleOptions().center(localPassageiro).radius(50).fillColor(Color.argb(90, 255, 153, 0)).strokeColor(Color.argb(190, 255, 152, 0)));
+        final Circle circlulo = mMap.addCircle(new CircleOptions().center(localDestino).radius(50).fillColor(Color.argb(90, 255, 153, 0)).strokeColor(Color.argb(190, 255, 152, 0)));
 
         //radius0.05 em km
-        GeoQuery geoQuery = geoFire.queryAtLocation(new GeoLocation(localPassageiro.latitude, localPassageiro.longitude),0.05);
+        final GeoQuery geoQuery = geoFire.queryAtLocation(new GeoLocation(localDestino.latitude, localDestino.longitude),0.05);
         geoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
             @Override
             public void onKeyEntered(String key, GeoLocation location) {
 
-                if(key.equals(passageiro.getId())){
+                if (key.equals(uOrigem.getId())) {
+                    //Log.d("onKeyEntered", "onKeyEntered: passageiro está dentro da área!");
+
+                    //Alterar status da requisicao
+                    requisicao.setStatus(status);
+                    requisicao.atualizarStatus();
+
+                    //Remove Listener
+                    geoQuery.removeAllListeners();
+                    circlulo.remove();
+
+                }
+
+
+             /*   if(key.equals(passageiro.getId())){
                         Log.d("onKeyEntered", "onKeyEntered: passageiro está dentro da área!");
                 }else if(key.equals(motorista.getId())){
                         Log.d("onKeyEntered", "onKeyEntered: motorista está dentro da área!");
-                }
+                }*/
 
             }
 
@@ -247,6 +341,19 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
         );
     }
 
+    private void adicionaMarcadorDestino(LatLng localizacao, String titulo){
+
+        if(marcadorPassageiro != null)
+            marcadorPassageiro.remove();
+
+        if(marcadorDestino != null)
+            marcadorDestino.remove();
+
+        marcadorDestino = mMap.addMarker(new MarkerOptions().position(localizacao).title(titulo).icon(BitmapDescriptorFactory.fromResource(R.drawable.destino))
+        );
+
+    }
+
     /**
      * Manipulates the map once available.
      * This callback is triggered when the map is ready to be used.
@@ -279,6 +386,12 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
 
                 //Atualizar Geofire
                 UsuarioFirebase.atualizarDadosLocalizacao(latitude, longitude);
+
+                //Atualizar localização motorista no firebase
+                motorista.setLatitude(String.valueOf(latitude));
+                motorista.setLongitude(String.valueOf(longitude));
+                requisicao.setMotorista(motorista);
+                requisicao.atualizarLocalizacaoMotorista();
 
                 alteraInterfaceStatusRequisicao(statusRequisicao);
 
@@ -338,6 +451,42 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        //Adicionar evento de clique no FabRota
+        fabRota = findViewById(R.id.fabRota);
+        fabRota.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                String status = statusRequisicao;
+                if (status != null && !status.isEmpty()) {
+
+                    String lat = "";
+                    String lon = "";
+
+                    switch (status){
+                        case Requisicao.STATUS_A_CAMINHO: requisicaoAcaminho();
+                            lat = String.valueOf(localPassageiro.latitude);
+                            lon = String.valueOf(localPassageiro.longitude);
+                            break;
+                        case Requisicao.STATUS_VIAGEM:
+                            lat = destino.getLatitude();
+                            lon = destino.getLongitude();
+                            break;
+                    }
+
+                    //Abrir Rota
+                    String latLong = lat + "," + lon;
+                    Uri uri = Uri.parse("google.navigation:q="+latLong+"&mode=d");
+                    Intent i = new Intent(Intent.ACTION_VIEW, uri);
+                    i.setPackage("com.google.android.apps.maps");
+                    startActivity(i);
+
+                }
+
+            }
+        });
+
+
     }
 
     @Override
@@ -348,6 +497,13 @@ public class CorridaActivity extends AppCompatActivity implements OnMapReadyCall
             Intent i = new Intent(CorridaActivity.this, RequisicoesActivity.class);
             startActivity(i);
         }
+
+        //Verificar o status da requisição para encerrar
+        if (statusRequisicao != null && !statusRequisicao.isEmpty()) {
+            requisicao.setStatus(Requisicao.STATUS_ENCERRADA);
+            requisicao.atualizarStatus();
+        }
+
         return false;
     }
 }

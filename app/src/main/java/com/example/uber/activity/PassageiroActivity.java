@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
@@ -13,6 +14,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 
 import com.example.uber.config.ConfiguracaoFirebase;
+import com.example.uber.helper.Local;
 import com.example.uber.helper.UsuarioFirebase;
 import com.example.uber.model.Destino;
 import com.example.uber.model.Requisicao;
@@ -23,6 +25,8 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -53,6 +57,7 @@ import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -70,9 +75,19 @@ public class PassageiroActivity extends AppCompatActivity implements OnMapReadyC
     private LocationManager locationManager;
     private LocationListener locationListener;
     private LatLng localPassageiro;
-    private boolean uberChamado = false;
+    private boolean cancelarUber = false;
     private DatabaseReference firebaseRef;
     private Requisicao requisicao;
+
+    private Usuario passageiro;
+    private String statusRequisicao;
+    private Destino destino;
+
+    private Marker marcadorMotorista;
+    private Marker marcadorPassageiro;
+    private Marker marcadorDestino;
+    private Usuario motorista;
+    private LatLng localMotorista;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,14 +132,26 @@ public class PassageiroActivity extends AppCompatActivity implements OnMapReadyC
 
                     requisicao = lista.get(0);
 
-                    switch (requisicao.getStatus()){
+                    if(requisicao != null) {
 
-                        case Requisicao.STATUS_AGUARDANDO :
-                            linearLayoutDestino.setVisibility(View.GONE);
-                            buttonChamarUber.setText("Cancelar Uber");
-                            uberChamado = true;
-                            break;
+                        if (!requisicao.getStatus().equals(Requisicao.STATUS_ENCERRADA)) {
 
+                            passageiro = requisicao.getPassageiro();
+                            localPassageiro = new LatLng(
+                                    Double.parseDouble(passageiro.getLatitude()),
+                                    Double.parseDouble(passageiro.getLongitude()));
+
+                            statusRequisicao = requisicao.getStatus();
+                            destino = requisicao.getDestino();
+
+                            if (requisicao.getMotorista() != null) {
+                                motorista = requisicao.getMotorista();
+                                localMotorista = new LatLng(
+                                        Double.parseDouble(motorista.getLatitude()),
+                                        Double.parseDouble(motorista.getLongitude()));
+                            }
+                            alteraInterfaceStatusRequisicao(statusRequisicao);
+                        }
                     }
                 }
 
@@ -137,6 +164,197 @@ public class PassageiroActivity extends AppCompatActivity implements OnMapReadyC
         });
 
     }
+
+    private void alteraInterfaceStatusRequisicao(String status){
+
+        if (status != null && !status.isEmpty()) {
+            cancelarUber = false;
+
+            switch (status) {
+
+                case Requisicao.STATUS_AGUARDANDO:
+                    requisicaoAguardando();
+                    break;
+
+                case Requisicao.STATUS_A_CAMINHO:
+                    requisicaoAcaminho();
+                    break;
+
+                case Requisicao.STATUS_VIAGEM:
+                    requisicaoViagem();
+                    break;
+
+                case Requisicao.STATUS_FINALIZADA:
+                    requisicaoFinalizada();
+                    break;
+
+                case Requisicao.STATUS_CANCELADA:
+                    requisicaoCancelada();
+                    break;
+
+
+            }
+        } else {
+            //Adiciona marcador passageiro
+            adicionaMarcadorPassageiro(localPassageiro, "Seu Local");
+            centralizarMarcador(localPassageiro);
+        }
+    }
+
+    private void requisicaoCancelada() {
+
+        linearLayoutDestino.setVisibility(View.VISIBLE);
+        buttonChamarUber.setText("Chamar Uber");
+        cancelarUber = false;
+    }
+
+    private void requisicaoAguardando() {
+        linearLayoutDestino.setVisibility(View.GONE);
+        buttonChamarUber.setText("Cancelar Uber");
+        cancelarUber = true;
+
+        //Adicionar Marcador passageiro
+        adicionaMarcadorPassageiro(localPassageiro, passageiro.getNome());
+        centralizarMarcador(localPassageiro);
+    }
+
+    private void requisicaoAcaminho() {
+
+        linearLayoutDestino.setVisibility(View.GONE);
+        buttonChamarUber.setText("Motorista a Caminho");
+        buttonChamarUber.setEnabled(false);
+
+        //Adiciona marcador passageiro
+        adicionaMarcadorPassageiro(localPassageiro, passageiro.getNome());
+
+        //Adiciona marcador motorista
+        adicionaMarcadorMotorista(localMotorista, motorista.getNome());
+
+        //Centralizar passageiro / motorista
+        centralizarDoisMarcadores(marcadorMotorista, marcadorPassageiro);
+
+    }
+
+    private void requisicaoViagem() {
+
+        linearLayoutDestino.setVisibility(View.GONE);
+        buttonChamarUber.setText("A Caminho do Destino");
+        buttonChamarUber.setEnabled(false);
+
+        //Adiciona marcador motorista
+        adicionaMarcadorMotorista(localMotorista, motorista.getNome());
+
+        //Adiciona marcador de destino
+        LatLng localDestino = new LatLng(
+                Double.parseDouble(destino.getLatitude()),
+                Double.parseDouble(destino.getLongitude()));
+
+        adicionaMarcadorDestino(localDestino, "Destino");
+
+        //Centralizar marcadores motorista / destino
+        centralizarDoisMarcadores(marcadorMotorista, marcadorDestino);
+    }
+
+    private void requisicaoFinalizada() {
+
+        linearLayoutDestino.setVisibility(View.GONE);
+        buttonChamarUber.setEnabled(false);
+
+        //Adiciona marcador de destino
+        LatLng localDestino = new LatLng(
+                Double.parseDouble(destino.getLatitude()),
+                Double.parseDouble(destino.getLongitude()));
+
+        adicionaMarcadorDestino(localDestino, "Destino");
+        centralizarMarcador(localDestino);
+
+        //Calcular distancia
+        float distancia = Local.calcularDistancia(localPassageiro, localDestino);
+        float valor = distancia * 8;
+        DecimalFormat decimal = new DecimalFormat("0.00");
+        final String resultado = decimal.format(valor);
+
+        buttonChamarUber.setText("Corrida finalizada - R$ " + resultado);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle("Total da viagem")
+                .setMessage("Sua Viagem ficou: R$ " + resultado)
+                .setCancelable(false)
+                .setNegativeButton("Encerrar viagem", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                        requisicao.setStatus(Requisicao.STATUS_ENCERRADA);
+                        requisicao.atualizarStatus();
+                        finish();
+                        startActivity(new Intent(getIntent()));
+
+                    }
+                });
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
+
+    private void adicionaMarcadorPassageiro(LatLng localizacao, String titulo){
+
+        if(marcadorPassageiro != null)
+            marcadorPassageiro.remove();
+
+        marcadorPassageiro = mMap.addMarker(new MarkerOptions().position(localizacao).title(titulo).icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
+        );
+    }
+
+    private void adicionaMarcadorMotorista(LatLng localizacao, String titulo){
+
+        if(marcadorMotorista != null)
+            marcadorMotorista.remove();
+
+        marcadorMotorista = mMap.addMarker(new MarkerOptions().position(localizacao).title(titulo).icon(BitmapDescriptorFactory.fromResource(R.drawable.carro))
+        );
+
+    }
+
+    private void adicionaMarcadorDestino(LatLng localizacao, String titulo){
+
+        if(marcadorPassageiro != null)
+            marcadorPassageiro.remove();
+
+        if(marcadorDestino != null)
+            marcadorDestino.remove();
+
+        marcadorDestino = mMap.addMarker(new MarkerOptions().position(localizacao).title(titulo).icon(BitmapDescriptorFactory.fromResource(R.drawable.destino))
+        );
+
+    }
+
+    private void centralizarMarcador(LatLng local){
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(local, 20));
+
+    }
+
+    private void centralizarDoisMarcadores(Marker marcador1, Marker marcador2){
+
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+
+        builder.include(marcador1.getPosition());
+        builder.include(marcador2.getPosition());
+
+        LatLngBounds bounds = builder.build();
+
+        int largura = getResources().getDisplayMetrics().widthPixels;
+        int altura = getResources().getDisplayMetrics().heightPixels;
+
+        int espacoInterno = (int) (largura * 0.20);
+        //int espacoInterno = (int) (largura * 0.20);
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngBounds(bounds, largura, altura, espacoInterno));
+
+    }
+
+
 
     /**
      * Manipulates the map once available.
@@ -157,9 +375,18 @@ public class PassageiroActivity extends AppCompatActivity implements OnMapReadyC
     }
         public void chamarUber(View view){
 
-            if(!uberChamado){ //Uber não foi chamado
+        //false -> uber não pode ser cancelado ainda
+        //true  -> uber pode ser cancelado
 
-            String enderecoDestino = editDestino.getText().toString();
+            if(cancelarUber){ //Uber pode ser cancelado
+
+                //CANCELAR A REQUISICAO
+                requisicao.setStatus(Requisicao.STATUS_CANCELADA);
+                requisicao.atualizarStatus();
+
+            }else{
+
+                String enderecoDestino = editDestino.getText().toString();
 
                 if(!enderecoDestino.equals("") || enderecoDestino != null){
 
@@ -190,7 +417,6 @@ public class PassageiroActivity extends AppCompatActivity implements OnMapReadyC
                                 //Salvar Requisição
 
                                 salvarRequisicao(destino);
-                                uberChamado = true;
 
                             }
                         }).setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
@@ -211,10 +437,8 @@ public class PassageiroActivity extends AppCompatActivity implements OnMapReadyC
 
                 }//FIM CHAMAR UBER
 
-            }else{
-                    //CANCELAR A REQUISICAO
 
-                uberChamado = false;
+
 
             }
 
@@ -281,12 +505,23 @@ public class PassageiroActivity extends AppCompatActivity implements OnMapReadyC
                 //Atualizar Geofire
                 UsuarioFirebase.atualizarDadosLocalizacao(latitude, longitude);
 
-                mMap.clear();
-                mMap.addMarker(new MarkerOptions().position(localPassageiro).title("Meu Local").icon(BitmapDescriptorFactory.fromResource(R.drawable.usuario))
-                );
+                //Altera interface de acordo com o status
+                alteraInterfaceStatusRequisicao(statusRequisicao);
 
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(localPassageiro, 15));
+                if (statusRequisicao != null && !statusRequisicao.isEmpty()) {
 
+                    if (statusRequisicao.equals(Requisicao.STATUS_VIAGEM) || statusRequisicao.equals(Requisicao.STATUS_FINALIZADA)) {
+                        locationManager.removeUpdates(locationListener);
+                    }else{
+
+                        //Solicitar atualizações de Localização
+                        if (ActivityCompat.checkSelfPermission(PassageiroActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ) {
+                            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10000, 10, locationListener);
+
+                        }
+
+                        }
+                }
             }
 
             @Override
