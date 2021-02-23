@@ -1,7 +1,6 @@
 # uber
-Esse é um Repositório do projeto Uber Clone
 
-# Uber desenvolvido com linguagem de programação Java
+# Uber developed with Java programming language
 
 ## Description
 
@@ -40,5 +39,5 @@ This project is part of my personal portfolio, an application that simulates som
 
 ## Connecting the application to the server-
 
-Follow the instructions on the <a href="https://firebase.google.com/docs?authuser=0">Firebase</a> website to add the Firebase Cloud Firestore database to the project.
+Follow the instructions on the <a href="https://firebase.google.com/docs?authuser=0">Firebase</a> website to add the Firebase Realtime Database to the project.
 
